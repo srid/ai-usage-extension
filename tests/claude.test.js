@@ -29,12 +29,14 @@ test("extracts weekly Claude usage and ignores extra usage", () => {
   assert.equal(result.projectionStatus, "over-limit");
   assert.ok(result.projectedPercentUsed > 100);
   assert.equal(result.primaryLimit.label, "Weekly all models");
+  assert.equal(result.primaryLimit.resetText, "Resets Mon 5:00 PM");
   assert.deepEqual(result.limits.map((limit) => limit.label), [
     "Weekly all models",
     "Weekly Sonnet",
     "Weekly Claude Design"
   ]);
   assert.equal(result.limits.some((limit) => limit.label === "Extra usage"), false);
+  assert.equal(result.limits.some((limit) => limit.label === "Current session"), false);
 });
 
 test("reports Cloudflare or challenge pages as temporarily unavailable", () => {

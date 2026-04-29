@@ -102,7 +102,6 @@ function renderLimit(limit) {
       <progress max="100" value="${Math.min(100, limit.percentUsed)}"></progress>
       ${renderProjection(limit.projection)}
       ${reset}
-      <div class="muted">${escapeHtml(limit.rawText ?? "")}</div>
     </li>
   `;
 }

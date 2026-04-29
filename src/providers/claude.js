@@ -115,11 +115,13 @@ export function scrapeClaudeUsage(textOverride, options = {}) {
       let match = percentagePattern.exec(line);
       while (match) {
         const percent = clampPercent(Number(match[2]));
-        const context = contextForLine(line, match.index, candidateLines, index);
+        const section = enclosingSection(candidateLines, index);
+        const context = contextForLine(line, match.index, candidateLines, index, section);
         limits.push({
-          label: classifyLimitLabel(context),
+          label: classifyLimitLabel(context, section),
           percentUsed: percent,
           resetText: findResetText(context, candidateLines, index),
+          section,
           source: "text",
           rawText: trimText(context, 220)
         });
@@ -240,7 +242,7 @@ export function scrapeClaudeUsage(textOverride, options = {}) {
   }
 
   function isWeeklyLimit(limit) {
-    return /weekly/i.test(limit.label) || /weekly limits/i.test(limit.rawText ?? "");
+    return /weekly limits/i.test(limit.section ?? "") || /weekly/i.test(limit.label);
   }
 
   function isExtraUsageLimit(limit) {
@@ -267,27 +269,28 @@ export function scrapeClaudeUsage(textOverride, options = {}) {
     return unique.sort((left, right) => right.percentUsed - left.percentUsed);
   }
 
-  function classifyLimitLabel(context) {
+  function classifyLimitLabel(context, section = "") {
     const text = context.toLowerCase();
+    const weekly = /weekly limits/i.test(section) || /weekly/i.test(text);
     if (/extra usage/.test(text)) {
       return "Extra usage";
     }
-    if (/opus/.test(text) && /weekly/.test(text)) {
+    if (/opus/.test(text) && weekly) {
       return "Weekly Opus";
     }
-    if (/sonnet/.test(text) && /weekly/.test(text)) {
+    if (/sonnet/.test(text) && weekly) {
       return "Weekly Sonnet";
     }
-    if (/claude design|design/.test(text) && /weekly/.test(text)) {
+    if (/claude design|design/.test(text) && weekly) {
       return "Weekly Claude Design";
     }
-    if (/weekly/.test(text) && /(all|other)\s+models?/.test(text)) {
+    if (weekly && /(all|other)\s+models?/.test(text)) {
       return "Weekly all models";
     }
     if (/(all|other)\s+models?/.test(text)) {
       return "All models";
     }
-    if (/weekly/.test(text)) {
+    if (weekly) {
       return "Weekly usage";
     }
     if (/current session|five-hour|5-hour|5 hour|session/.test(text)) {
@@ -296,9 +299,9 @@ export function scrapeClaudeUsage(textOverride, options = {}) {
     return "Usage";
   }
 
-  function contextForLine(line, matchIndex, candidateLines, lineIndex) {
+  function contextForLine(line, matchIndex, candidateLines, lineIndex, section) {
     return [
-      enclosingSection(candidateLines, lineIndex),
+      section,
       contextWindow(line, matchIndex, candidateLines, lineIndex)
     ].filter(Boolean).join(" ");
   }
@@ -308,15 +311,14 @@ export function scrapeClaudeUsage(textOverride, options = {}) {
     return [
       candidateLines[lineIndex - 2],
       candidateLines[lineIndex - 1],
-      sameLine,
-      candidateLines[lineIndex + 1]
+      sameLine
     ].filter(Boolean).join(" ");
   }
 
   function enclosingSection(candidateLines, lineIndex) {
     for (let index = lineIndex; index >= 0; index -= 1) {
       const line = candidateLines[index];
-      if (/^(plan usage limits|weekly limits|additional features|extra usage)$/i.test(line)) {
+      if (/^(weekly limits|additional features|extra usage)$/i.test(line)) {
         return line;
       }
     }
@@ -324,6 +326,13 @@ export function scrapeClaudeUsage(textOverride, options = {}) {
   }
 
   function findResetText(context, candidateLines, lineIndex = null) {
+    if (lineIndex !== null) {
+      const resetLine = nearestResetLine(candidateLines, lineIndex);
+      if (resetLine) {
+        return resetLine;
+      }
+    }
+
     const related = [context];
     if (lineIndex !== null) {
       related.push(candidateLines[lineIndex - 2], candidateLines[lineIndex - 1], candidateLines[lineIndex + 1], candidateLines[lineIndex + 2]);
@@ -333,6 +342,29 @@ export function scrapeClaudeUsage(textOverride, options = {}) {
       .map((line) => normalizeText(line))
       .find((line) => /\b(reset|resets|remaining|renews|available|until)\b/i.test(line));
     return resetLine ? trimText(resetLine, 180) : null;
+  }
+
+  function nearestResetLine(candidateLines, lineIndex) {
+    const section = enclosingSection(candidateLines, lineIndex);
+    for (let index = lineIndex; index >= 0; index -= 1) {
+      const line = candidateLines[index];
+      if (index !== lineIndex && enclosingSection(candidateLines, index) !== section) {
+        break;
+      }
+      if (/\bresets?\b/i.test(line)) {
+        return trimText(line, 180);
+      }
+    }
+    for (let index = lineIndex + 1; index < candidateLines.length; index += 1) {
+      const line = candidateLines[index];
+      if (enclosingSection(candidateLines, index) !== section) {
+        break;
+      }
+      if (/\bresets?\b/i.test(line)) {
+        return trimText(line, 180);
+      }
+    }
+    return null;
   }
 
   function nearbyText(node) {
