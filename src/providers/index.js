@@ -1,6 +1,7 @@
 import { CLAUDE_PROVIDER } from "./claude.js";
+import { CODEX_PROVIDER } from "./codex.js";
 
-export const PROVIDERS = [CLAUDE_PROVIDER];
+export const PROVIDERS = [CLAUDE_PROVIDER, CODEX_PROVIDER];
 export const DEFAULT_PROVIDER_ID = "claude";
 
 export function getProvider(providerId) {

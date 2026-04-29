@@ -8,15 +8,18 @@ assert.equal(manifest.background.type, "module");
 assert.equal(manifest.background.service_worker, "src/background.js");
 assert.deepEqual(new Set(manifest.permissions), new Set(["alarms", "scripting", "storage", "tabs"]));
 assert.ok(manifest.host_permissions.includes("https://claude.ai/*"));
+assert.ok(manifest.host_permissions.includes("https://chatgpt.com/*"));
 assert.equal(manifest.action.default_popup, "popup.html");
 
 const requiredFiles = [
   "popup.html",
   "src/background.js",
+  "src/badge-source.js",
   "src/badge.js",
   "src/badge-icon.js",
   "src/badge-view.js",
   "src/providers/claude.js",
+  "src/providers/codex.js",
   "src/providers/index.js",
   "src/providers/reader.js",
   "src/popup.js",

@@ -1,16 +1,16 @@
 # AI Usage Extension
 
-Chrome MV3 extension for tracking AI assistant usage from signed-in provider pages. The first provider is Claude at `https://claude.ai/settings/usage`.
+Chrome MV3 extension for tracking AI assistant usage from signed-in provider pages. The first providers are Claude at `https://claude.ai/settings/usage` and Codex at `https://chatgpt.com/codex/cloud/settings/analytics#usage`.
 
 ## Behavior
 
-- Finds an existing Claude usage tab, or opens one in the background.
-- Reads visible usage percentages from the signed-in page.
+- Finds existing provider usage tabs, or opens them in the background.
+- Reads visible weekly usage percentages from signed-in pages.
 - Stores the latest snapshot in `chrome.storage.local`.
-- Shows the selected usage percentage on the extension action badge.
-- Shows snapshot details in the popup.
+- Shows the highest projected weekly usage risk on the extension action badge.
+- Shows current usage, projected usage, reset details, and provider rows in the popup.
 
-The provider scraper lives under `src/providers/`. Badge text, colors, title text, and icon drawing live in `src/badge.js`, so adding Codex later should not require changing badge rendering or tab orchestration.
+The provider scrapers live under `src/providers/`. Badge text, colors, title text, icon drawing, and provider-risk selection live in `src/badge*.js`, so future badge visuals can change without rewriting provider extraction or tab orchestration.
 
 ## Development
 

@@ -2,25 +2,39 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { scrapeClaudeUsage } from "../src/providers/claude.js";
 
-test("extracts the highest relevant Claude usage percentage", () => {
+test("extracts weekly Claude usage and ignores extra usage", () => {
   const result = scrapeClaudeUsage(`
     Plan usage limits
     Current session
-    24%
+    78% used
     2 hours remaining
     Weekly limits
     All models
-    67%
-    resets Monday
-    Weekly limits
-    Opus only
-    42%
-  `);
+    29% used
+    Resets Mon 5:00 PM
+    Sonnet only
+    4% used
+    Claude Design
+    0% used
+    Additional features
+    Daily included routine runs
+    1 / 15
+    Extra usage
+    CA$283.23 spent
+    98% used
+  `, { now: new Date(2026, 3, 29, 10, 0, 0) });
 
   assert.equal(result.status, "ok");
-  assert.equal(result.percentUsed, 67);
+  assert.equal(result.percentUsed, 29);
+  assert.equal(result.projectionStatus, "over-limit");
+  assert.ok(result.projectedPercentUsed > 100);
   assert.equal(result.primaryLimit.label, "Weekly all models");
-  assert.equal(result.limits.length, 3);
+  assert.deepEqual(result.limits.map((limit) => limit.label), [
+    "Weekly all models",
+    "Weekly Sonnet",
+    "Weekly Claude Design"
+  ]);
+  assert.equal(result.limits.some((limit) => limit.label === "Extra usage"), false);
 });
 
 test("reports Cloudflare or challenge pages as temporarily unavailable", () => {

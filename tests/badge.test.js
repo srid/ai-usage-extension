@@ -22,6 +22,27 @@ test("builds an ok badge state from a usage snapshot", () => {
   assert.match(state.title, /Claude usage/);
 });
 
+test("uses projected weekly usage for badge state when available", () => {
+  const state = buildBadgeState({
+    providerName: "Claude",
+    status: "ok",
+    percentUsed: 29,
+    primaryLimit: {
+      label: "Weekly all models",
+      percentUsed: 29,
+      projection: {
+        projectedPercentUsed: 118,
+        status: "over-limit"
+      }
+    },
+    limits: []
+  });
+
+  assert.equal(state.text, "118%");
+  assert.match(state.title, /projected usage/);
+  assert.match(state.title, /over weekly limit/);
+});
+
 test("builds an error badge state without throwing", () => {
   const state = buildBadgeState({
     providerName: "Claude",

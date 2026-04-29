@@ -4,12 +4,19 @@ export const CLAUDE_PROVIDER = {
   id: "claude",
   name: "Claude",
   extract: scrapeClaudeUsage,
+  extractorOptions: {
+    ignoreExtraUsage: true,
+    providerName: "Claude"
+  },
   tabUrlPatterns: ["https://claude.ai/settings/usage*"],
   usageUrl: CLAUDE_USAGE_URL
 };
 
-export function scrapeClaudeUsage(textOverride) {
+export function scrapeClaudeUsage(textOverride, options = {}) {
+  const providerName = options.providerName ?? "Claude";
+  const ignoreExtraUsage = options.ignoreExtraUsage ?? true;
   const pageText = readClaudePageText(textOverride);
+  const now = coerceDate(options.now);
   const lines = splitUsageLines(pageText);
   const pageState = detectClaudePageState(lines);
 
@@ -17,13 +24,14 @@ export function scrapeClaudeUsage(textOverride) {
     return statusResult(pageState.status, pageState.error, lines);
   }
 
-  const limits = dedupeLimits([
+  const extractedLimits = dedupeLimits([
     ...extractDomLimits(textOverride, lines),
     ...extractTextLimits(lines)
   ]);
+  const limits = addLimitProjections(trackedClaudeLimits(extractedLimits), now);
 
   if (limits.length === 0) {
-    return statusResult("not-found", "No usage percentages were found on the Claude usage page", lines);
+    return statusResult("not-found", `No weekly ${providerName} usage percentages were found on the ${providerName} usage page`, lines);
   }
 
   const primaryLimit = choosePrimaryLimit(limits);
@@ -32,6 +40,8 @@ export function scrapeClaudeUsage(textOverride) {
     pageTitle: typeof document === "undefined" ? null : document.title,
     percentUsed: primaryLimit.percentUsed,
     percentRemaining: Math.max(0, 100 - primaryLimit.percentUsed),
+    projectedPercentUsed: primaryLimit.projection?.projectedPercentUsed ?? null,
+    projectionStatus: primaryLimit.projection?.status ?? "unknown",
     primaryLimit,
     limits,
     textSample: lines.slice(0, 8)
@@ -56,13 +66,13 @@ export function scrapeClaudeUsage(textOverride) {
     if (/just a moment|enable javascript and cookies|cloudflare|challenge/i.test(text)) {
       return {
         status: "unavailable",
-        error: "Claude usage page is not available yet"
+        error: `${providerName} usage page is not available yet`
       };
     }
-    if (/sign in to claude|log in to claude|continue with google|continue with email/i.test(text)) {
+    if (/\bsign in\b|\blog in\b|continue with google|continue with email/i.test(text)) {
       return {
         status: "needs-login",
-        error: "Sign in to Claude before usage can be read"
+        error: `Sign in before ${providerName} usage can be read`
       };
     }
     return { status: "ok" };
@@ -105,7 +115,7 @@ export function scrapeClaudeUsage(textOverride) {
       let match = percentagePattern.exec(line);
       while (match) {
         const percent = clampPercent(Number(match[2]));
-        const context = contextWindow(line, match.index, candidateLines, index);
+        const context = contextForLine(line, match.index, candidateLines, index);
         limits.push({
           label: classifyLimitLabel(context),
           percentUsed: percent,
@@ -131,14 +141,114 @@ export function scrapeClaudeUsage(textOverride) {
   }
 
   function limitScore(limit) {
-    let score = limit.percentUsed;
-    if (/weekly/i.test(limit.label)) {
-      score += 5;
+    let score = 0;
+    if (/weekly all models/i.test(limit.label)) {
+      score += 300;
+    } else if (/all models/i.test(limit.label)) {
+      score += 250;
+    } else if (/weekly/i.test(limit.label)) {
+      score += 200;
     }
-    if (/all models/i.test(limit.label)) {
-      score += 3;
+    if (/opus|sonnet|design/i.test(limit.label)) {
+      score -= 25;
     }
+    score += limit.percentUsed / 100;
     return score;
+  }
+
+  function addLimitProjections(candidateLimits, currentTime) {
+    return candidateLimits.map((limit) => ({
+      ...limit,
+      projection: projectWeeklyLimit(limit, currentTime)
+    }));
+  }
+
+  function projectWeeklyLimit(limit, currentTime) {
+    if (!isWeeklyLimit(limit) || !limit.resetText) {
+      return null;
+    }
+
+    const resetAt = parseResetAt(limit.resetText, currentTime);
+    if (!resetAt) {
+      return null;
+    }
+
+    const periodMs = 7 * 24 * 60 * 60 * 1000;
+    const startedAt = new Date(resetAt.getTime() - periodMs);
+    const elapsedMs = currentTime.getTime() - startedAt.getTime();
+    if (elapsedMs <= 0 || elapsedMs > periodMs) {
+      return null;
+    }
+
+    const elapsedFraction = elapsedMs / periodMs;
+    const projectedPercentUsed = clampPercent(limit.percentUsed / elapsedFraction);
+    return {
+      elapsedFraction,
+      projectedPercentUsed,
+      projectedPercentRemaining: Math.max(0, 100 - projectedPercentUsed),
+      resetAt: resetAt.toISOString(),
+      startedAt: startedAt.toISOString(),
+      status: projectedPercentUsed <= 100 ? "within-limit" : "over-limit"
+    };
+  }
+
+  function parseResetAt(resetText, currentTime) {
+    const match = /\bresets?\s+(sun|mon|tue|wed|thu|fri|sat)(?:day)?(?:\s+at)?(?:\s+(\d{1,2})(?::(\d{2}))?\s*([ap]\.?m\.?)?)?\b/i.exec(resetText);
+    if (!match) {
+      return null;
+    }
+
+    const dayIndex = weekdayIndex(match[1]);
+    const hour = match[2] ? parseHour(Number(match[2]), match[4]) : 0;
+    const minute = Number(match[3] ?? 0);
+    const resetAt = new Date(currentTime);
+    resetAt.setHours(hour, minute, 0, 0);
+
+    const daysUntilReset = (dayIndex - resetAt.getDay() + 7) % 7;
+    resetAt.setDate(resetAt.getDate() + daysUntilReset);
+    if (resetAt <= currentTime) {
+      resetAt.setDate(resetAt.getDate() + 7);
+    }
+    return resetAt;
+  }
+
+  function weekdayIndex(dayName) {
+    return ["sun", "mon", "tue", "wed", "thu", "fri", "sat"].indexOf(dayName.slice(0, 3).toLowerCase());
+  }
+
+  function parseHour(hour, meridiem) {
+    if (!meridiem) {
+      return hour;
+    }
+
+    const normalized = meridiem.toLowerCase();
+    if (normalized.startsWith("p") && hour < 12) {
+      return hour + 12;
+    }
+    if (normalized.startsWith("a") && hour === 12) {
+      return 0;
+    }
+    return hour;
+  }
+
+  function trackedClaudeLimits(candidateLimits) {
+    const weeklyLimits = candidateLimits.filter((limit) => isWeeklyLimit(limit) && !isIgnoredLimit(limit));
+    if (weeklyLimits.length > 0) {
+      return weeklyLimits;
+    }
+    return candidateLimits.filter((limit) => !isIgnoredLimit(limit));
+  }
+
+  function isWeeklyLimit(limit) {
+    return /weekly/i.test(limit.label) || /weekly limits/i.test(limit.rawText ?? "");
+  }
+
+  function isExtraUsageLimit(limit) {
+    return /extra usage/i.test(`${limit.label} ${limit.rawText ?? ""}`);
+  }
+
+  function isIgnoredLimit(limit) {
+    return ignoreExtraUsage && isExtraUsageLimit(limit);
   }
 
   function dedupeLimits(candidateLimits) {
@@ -165,6 +275,12 @@ export function scrapeClaudeUsage(textOverride) {
     if (/opus/.test(text) && /weekly/.test(text)) {
       return "Weekly Opus";
     }
+    if (/sonnet/.test(text) && /weekly/.test(text)) {
+      return "Weekly Sonnet";
+    }
+    if (/claude design|design/.test(text) && /weekly/.test(text)) {
+      return "Weekly Claude Design";
+    }
     if (/weekly/.test(text) && /(all|other)\s+models?/.test(text)) {
       return "Weekly all models";
     }
@@ -180,6 +296,13 @@ export function scrapeClaudeUsage(textOverride) {
     return "Usage";
   }
 
+  function contextForLine(line, matchIndex, candidateLines, lineIndex) {
+    return [
+      enclosingSection(candidateLines, lineIndex),
+      contextWindow(line, matchIndex, candidateLines, lineIndex)
+    ].filter(Boolean).join(" ");
+  }
+
   function contextWindow(line, matchIndex, candidateLines, lineIndex) {
     const sameLine = line.slice(Math.max(0, matchIndex - 90), Math.min(line.length, matchIndex + 90));
     return [
@@ -188,6 +311,16 @@ export function scrapeClaudeUsage(textOverride) {
       sameLine,
       candidateLines[lineIndex + 1]
     ].filter(Boolean).join(" ");
+  }
+
+  function enclosingSection(candidateLines, lineIndex) {
+    for (let index = lineIndex; index >= 0; index -= 1) {
+      const line = candidateLines[index];
+      if (/^(plan usage limits|weekly limits|additional features|extra usage)$/i.test(line)) {
+        return line;
+      }
+    }
+    return "";
   }
 
   function findResetText(context, candidateLines, lineIndex = null) {
@@ -250,6 +383,16 @@ export function scrapeClaudeUsage(textOverride) {
 
   function clampPercent(value) {
     return Math.max(0, Math.min(999, Number(value)));
+  }
+
+  function coerceDate(value) {
+    if (value instanceof Date) {
+      return value;
+    }
+    if (value) {
+      return new Date(value);
+    }
+    return new Date();
   }
 
   function trimText(value, maxLength) {

@@ -27,7 +27,7 @@ export function buildBadgeState(snapshot) {
     };
   }
 
-  const percent = isOkSnapshot(snapshot) ? snapshot.percentUsed : null;
+  const percent = isOkSnapshot(snapshot) ? badgePercent(snapshot) : null;
   const status = snapshot.status ?? "error";
   const text = isOkSnapshot(snapshot) ? formatBadgePercent(percent) : statusText(status);
   const color = isOkSnapshot(snapshot) ? colorForPercent(percent) : colorForStatus(status);
@@ -80,7 +80,14 @@ function buildTitle(snapshot) {
     return `${providerName} usage: ${reason}`;
   }
 
-  const lines = [`${providerName} usage: ${formatBadgePercent(snapshot.percentUsed ?? 0)} used`];
+  const projection = snapshot.primaryLimit?.projection;
+  const lines = projection
+    ? [`${providerName} projected usage: ${formatBadgePercent(projection.projectedPercentUsed)} by reset`]
+    : [`${providerName} usage: ${formatBadgePercent(snapshot.percentUsed ?? 0)} used`];
+  if (projection) {
+    lines.push(`Current ${snapshot.primaryLimit.label}: ${formatBadgePercent(snapshot.primaryLimit.percentUsed)} used`);
+    lines.push(projection.status === "within-limit" ? "Pace: within weekly limit" : "Pace: over weekly limit");
+  }
   for (const limit of snapshot.limits ?? []) {
     const percent = typeof limit.percentUsed === "number" ? ` - ${formatBadgePercent(limit.percentUsed)}` : "";
     lines.push(`${limit.label}${percent}`);
@@ -92,4 +99,8 @@ function buildTitle(snapshot) {
     lines.push(`Updated ${new Date(snapshot.capturedAt).toLocaleString()}`);
   }
   return lines.join("\n");
+}
+
+function badgePercent(snapshot) {
+  return snapshot.primaryLimit?.projection?.projectedPercentUsed ?? snapshot.percentUsed;
 }

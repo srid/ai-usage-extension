@@ -6,13 +6,19 @@
     <title>AI Usage</title>
     <style>
       :root {
+        --accent: #2f7dd3;
+        --danger: #b42318;
+        --divider: color-mix(in srgb, CanvasText 10%, transparent);
+        --field: color-mix(in srgb, CanvasText 4%, Canvas);
+        --ok: #188038;
+        --text-soft: color-mix(in srgb, CanvasText 62%, transparent);
         color-scheme: light dark;
-        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        font-family: "Avenir Next", "DIN Alternate", "IBM Plex Sans", system-ui, sans-serif;
       }
 
       body {
         margin: 0;
-        width: 320px;
+        width: 380px;
         background: Canvas;
         color: CanvasText;
       }
@@ -37,6 +43,13 @@
         margin: 0;
       }
 
+      h2 {
+        font-size: 13px;
+        font-weight: 650;
+        line-height: 1.2;
+        margin: 0 0 8px;
+      }
+
       button {
         border: 1px solid color-mix(in srgb, CanvasText 20%, transparent);
         border-radius: 6px;
@@ -55,7 +68,63 @@
       .summary {
         border: 1px solid color-mix(in srgb, CanvasText 12%, transparent);
         border-radius: 8px;
-        padding: 12px;
+        padding: 0 12px 12px;
+      }
+
+      .provider {
+        padding-block-start: 12px;
+      }
+
+      .provider + .provider {
+        border-top: 1px solid var(--divider);
+        margin-block-start: 12px;
+        padding-block-start: 12px;
+      }
+
+      .provider-heading {
+        align-items: center;
+        display: flex;
+        gap: 8px;
+        justify-content: space-between;
+        margin-block-end: 10px;
+      }
+
+      .status-pill {
+        border: 1px solid currentColor;
+        border-radius: 999px;
+        font-size: 11px;
+        font-weight: 650;
+        line-height: 1;
+        padding: 4px 7px;
+        white-space: nowrap;
+      }
+
+      .metric-grid {
+        display: grid;
+        gap: 8px;
+        grid-template-columns: 1fr 1fr;
+        margin-block-end: 10px;
+      }
+
+      .metric {
+        background: var(--field);
+        border: 1px solid var(--divider);
+        border-radius: 6px;
+        display: grid;
+        gap: 2px;
+        padding: 8px;
+      }
+
+      .metric span {
+        color: var(--text-soft);
+        font-size: 11px;
+        line-height: 1.25;
+      }
+
+      .metric strong {
+        font-size: 18px;
+        font-variant-numeric: tabular-nums;
+        line-height: 1.1;
       }
 
       .meter {
@@ -82,19 +151,52 @@
       }
 
       progress {
-        accent-color: #2f7dd3;
+        accent-color: var(--accent);
         height: 10px;
         width: 100%;
       }
 
+      progress.danger {
+        accent-color: var(--danger);
+      }
+
+      progress.ok {
+        accent-color: var(--ok);
+      }
+
       .muted {
-        color: color-mix(in srgb, CanvasText 62%, transparent);
+        color: var(--text-soft);
         font-size: 12px;
         line-height: 1.35;
       }
 
+      .details {
+        display: grid;
+        gap: 4px;
+        margin-block: 10px;
+      }
+
+      .detail-row {
+        align-items: baseline;
+        display: flex;
+        gap: 10px;
+        justify-content: space-between;
+      }
+
+      .detail-row span:last-child {
+        font-size: 12px;
+        font-variant-numeric: tabular-nums;
+        max-width: 210px;
+        overflow-wrap: anywhere;
+        text-align: right;
+      }
+
       .error {
-        color: #b42318;
+        color: var(--danger);
+      }
+
+      .ok {
+        color: var(--ok);
       }
 
       ul {

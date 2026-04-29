@@ -4,7 +4,7 @@
   "description": "Tracks AI assistant usage limits from signed-in provider pages.",
   "version": "0.1.0",
   "permissions": ["alarms", "scripting", "storage", "tabs"],
-  "host_permissions": ["https://claude.ai/*"],
+  "host_permissions": ["https://claude.ai/*", "https://chatgpt.com/*"],
   "background": {
     "service_worker": "src/background.js",
     "type": "module"

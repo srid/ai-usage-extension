@@ -1,4 +1,5 @@
 import { applyBadgeState } from "./badge.js";
+import { selectBadgeSnapshot } from "./badge-source.js";
 import { DEFAULT_PROVIDER_ID, PROVIDERS } from "./providers/index.js";
 import { executeProviderExtractor } from "./providers/reader.js";
 import { createErrorSnapshot, createUsageSnapshot } from "./snapshots.js";
@@ -57,8 +58,8 @@ async function ensureRefreshAlarm() {
 }
 
 async function applyBadgeFromStorage() {
-  const snapshot = await getProviderSnapshot(DEFAULT_PROVIDER_ID);
-  await applyBadgeState(snapshot);
+  const snapshots = await Promise.all(PROVIDERS.map((provider) => getProviderSnapshot(provider.id)));
+  await applyBadgeState(selectBadgeSnapshot(snapshots));
 }
 
 async function refreshAllProviders(reason) {
@@ -66,6 +67,7 @@ async function refreshAllProviders(reason) {
   for (const provider of PROVIDERS) {
     snapshots.push(await refreshProvider(provider, reason));
   }
+  await applyBadgeState(selectBadgeSnapshot(snapshots));
   return snapshots;
 }
 
@@ -80,16 +82,10 @@ async function refreshProvider(provider, reason) {
       tabId: readyTab.id
     });
     await saveProviderSnapshot(provider.id, snapshot);
-    if (provider.id === DEFAULT_PROVIDER_ID) {
-      await applyBadgeState(snapshot);
-    }
     return snapshot;
   } catch (error) {
     const snapshot = createErrorSnapshot(provider, error, { reason });
     await saveProviderSnapshot(provider.id, snapshot);
-    if (provider.id === DEFAULT_PROVIDER_ID) {
-      await applyBadgeState(snapshot);
-    }
     return snapshot;
   }
 }
