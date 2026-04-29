@@ -9,21 +9,17 @@ export const CLAUDE_PROVIDER = {
 };
 
 export function scrapeClaudeUsage(textOverride) {
-  const pageText = typeof textOverride === "string" ? textOverride : readVisiblePageText();
-  const normalizedText = normalizeText(pageText);
-  const lines = normalizedText.split("\n").map((line) => line.trim()).filter(Boolean);
+  const pageText = readClaudePageText(textOverride);
+  const lines = splitUsageLines(pageText);
+  const pageState = detectClaudePageState(lines);
 
-  if (looksUnavailable(normalizedText)) {
-    return statusResult("unavailable", "Claude usage page is not available yet", lines);
-  }
-
-  if (looksLikeLoginPage(normalizedText)) {
-    return statusResult("needs-login", "Sign in to Claude before usage can be read", lines);
+  if (pageState.status !== "ok") {
+    return statusResult(pageState.status, pageState.error, lines);
   }
 
   const limits = dedupeLimits([
-    ...readDomProgressBars(),
-    ...readTextPercentages(lines)
+    ...extractDomLimits(textOverride, lines),
+    ...extractTextLimits(lines)
   ]);
 
   if (limits.length === 0) {
@@ -41,15 +37,39 @@ export function scrapeClaudeUsage(textOverride) {
     textSample: lines.slice(0, 8)
   };
 
-  function readVisiblePageText() {
+  function readClaudePageText(overrideText) {
+    if (typeof overrideText === "string") {
+      return overrideText;
+    }
     if (typeof document === "undefined") {
       return "";
     }
     return document.body?.innerText ?? document.documentElement?.innerText ?? "";
   }
 
-  function readDomProgressBars() {
-    if (typeof document === "undefined" || typeof textOverride === "string") {
+  function splitUsageLines(text) {
+    return normalizeText(text).split("\n").map((line) => line.trim()).filter(Boolean);
+  }
+
+  function detectClaudePageState(candidateLines) {
+    const text = candidateLines.join("\n");
+    if (/just a moment|enable javascript and cookies|cloudflare|challenge/i.test(text)) {
+      return {
+        status: "unavailable",
+        error: "Claude usage page is not available yet"
+      };
+    }
+    if (/sign in to claude|log in to claude|continue with google|continue with email/i.test(text)) {
+      return {
+        status: "needs-login",
+        error: "Sign in to Claude before usage can be read"
+      };
+    }
+    return { status: "ok" };
+  }
+
+  function extractDomLimits(overrideText, candidateLines) {
+    if (typeof document === "undefined" || typeof overrideText === "string") {
       return [];
     }
 
@@ -70,14 +90,14 @@ export function scrapeClaudeUsage(textOverride) {
       return [{
         label: classifyLimitLabel(context),
         percentUsed,
-        resetText: findResetText(context, lines),
+        resetText: findResetText(context, candidateLines),
         source: "progressbar",
         rawText: trimText(context, 220)
       }];
     });
   }
 
-  function readTextPercentages(candidateLines) {
+  function extractTextLimits(candidateLines) {
     const limits = [];
     for (let index = 0; index < candidateLines.length; index += 1) {
       const line = candidateLines[index];
@@ -163,6 +183,7 @@ export function scrapeClaudeUsage(textOverride) {
   function contextWindow(line, matchIndex, candidateLines, lineIndex) {
     const sameLine = line.slice(Math.max(0, matchIndex - 90), Math.min(line.length, matchIndex + 90));
     return [
+      candidateLines[lineIndex - 2],
       candidateLines[lineIndex - 1],
       sameLine,
       candidateLines[lineIndex + 1]
@@ -206,14 +227,6 @@ export function scrapeClaudeUsage(textOverride) {
     const value = node[property];
     const number = Number(value);
     return Number.isFinite(number) ? number : null;
-  }
-
-  function looksUnavailable(text) {
-    return /just a moment|enable javascript and cookies|cloudflare|challenge/i.test(text);
-  }
-
-  function looksLikeLoginPage(text) {
-    return /sign in to claude|log in to claude|continue with google|continue with email/i.test(text);
   }
 
   function statusResult(status, error, sampleLines) {
