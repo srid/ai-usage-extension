@@ -1,10 +1,9 @@
 import { applyBadgeState } from "./badge.js";
-import { PROVIDERS, getProvider } from "./providers/index.js";
+import { DEFAULT_PROVIDER_ID, PROVIDERS } from "./providers/index.js";
 import { executeProviderExtractor } from "./providers/reader.js";
 import { getProviderSnapshot, saveProviderSnapshot } from "./storage.js";
 import { findOrOpenProviderTab, waitForTabReady } from "./tabs.js";
 
-const DEFAULT_PROVIDER_ID = "claude";
 const REFRESH_ALARM = "refresh-ai-usage";
 const REFRESH_PERIOD_MINUTES = 30;
 

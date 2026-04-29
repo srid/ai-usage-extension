@@ -1,7 +1,8 @@
 import { formatBadgePercent } from "./badge.js";
+import { getDefaultProvider } from "./providers/index.js";
 import { SNAPSHOTS_KEY, getProviderSnapshot } from "./storage.js";
 
-const PROVIDER_ID = "claude";
+const provider = getDefaultProvider();
 const content = document.querySelector("#content");
 const refreshButton = document.querySelector("#refresh");
 
@@ -30,11 +31,11 @@ chrome.storage.onChanged.addListener((changes, areaName) => {
 await renderLatest();
 
 async function renderLatest() {
-  const snapshot = await getProviderSnapshot(PROVIDER_ID);
+  const snapshot = await getProviderSnapshot(provider.id);
   if (!snapshot) {
     content.innerHTML = `
-      <p class="muted">No Claude usage has been captured yet.</p>
-      <p class="muted">Use Refresh to read or open the Claude usage page.</p>
+      <p class="muted">No ${escapeHtml(provider.name)} usage has been captured yet.</p>
+      <p class="muted">Use Refresh to read or open the ${escapeHtml(provider.name)} usage page.</p>
     `;
     return;
   }
