@@ -65,6 +65,24 @@
         opacity: 0.6;
       }
 
+      .header-actions {
+        align-items: center;
+        display: flex;
+        gap: 8px;
+        min-width: 0;
+      }
+
+      .last-updated {
+        color: var(--text-soft);
+        font-size: 11px;
+        line-height: 1.25;
+        max-width: 150px;
+        overflow: hidden;
+        text-align: right;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
       .summary {
         border: 1px solid color-mix(in srgb, CanvasText 12%, transparent);
         border-radius: 8px;
@@ -212,7 +230,10 @@
     <main>
       <header>
         <h1>AI Usage</h1>
-        <button id="refresh" type="button">Refresh</button>
+        <div class="header-actions">
+          <span id="last-updated" class="last-updated">Not updated yet</span>
+          <button id="refresh" type="button">Refresh</button>
+        </div>
       </header>
       <section id="content" class="summary" aria-live="polite"></section>
     </main>

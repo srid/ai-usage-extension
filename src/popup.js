@@ -5,7 +5,9 @@ import { formatUsagePercent } from "./usage-format.js";
 
 const providerStorageKeys = new Set(PROVIDERS.map((provider) => providerSnapshotKey(provider.id)));
 const content = document.querySelector("#content");
+const lastUpdated = document.querySelector("#last-updated");
 const refreshButton = document.querySelector("#refresh");
+let latestCapturedAt = null;
 
 refreshButton.addEventListener("click", async () => {
   refreshButton.disabled = true;
@@ -30,13 +32,33 @@ chrome.storage.onChanged.addListener((changes, areaName) => {
 });
 
 await renderLatest();
+setInterval(renderLastUpdated, 30 * 1000);
 
 async function renderLatest() {
   const entries = await Promise.all(PROVIDERS.map(async (provider) => ({
     provider,
     snapshot: await getProviderSnapshot(provider.id)
   })));
+  latestCapturedAt = newestCapturedAt(entries.map((entry) => entry.snapshot));
+  renderLastUpdated();
   content.innerHTML = entries.map(({ provider, snapshot }) => renderProvider(provider, snapshot)).join("");
+}
+
+function renderLastUpdated() {
+  if (!lastUpdated) {
+    return;
+  }
+
+  if (!latestCapturedAt) {
+    lastUpdated.textContent = "Not updated yet";
+    lastUpdated.title = "Not updated yet";
+    return;
+  }
+
+  const capturedAt = new Date(latestCapturedAt);
+  const age = relativeTime(capturedAt);
+  lastUpdated.textContent = age === "just now" ? "Last updated just now" : `Last updated ${age} ago`;
+  lastUpdated.title = `Last updated ${capturedAt.toLocaleString()}`;
 }
 
 function renderProvider(provider, snapshot) {
@@ -169,6 +191,40 @@ function updatedText(capturedAt) {
     return "Not updated yet";
   }
   return `Updated ${new Date(capturedAt).toLocaleString()}`;
+}
+
+function newestCapturedAt(snapshots) {
+  const times = snapshots
+    .map((snapshot) => Date.parse(snapshot?.capturedAt ?? ""))
+    .filter(Number.isFinite);
+  if (times.length === 0) {
+    return null;
+  }
+  return new Date(Math.max(...times)).toISOString();
+}
+
+function relativeTime(date, now = new Date()) {
+  const elapsedSeconds = Math.max(0, Math.floor((now.getTime() - date.getTime()) / 1000));
+  if (elapsedSeconds < 60) {
+    return "just now";
+  }
+
+  const elapsedMinutes = Math.floor(elapsedSeconds / 60);
+  if (elapsedMinutes < 60) {
+    return pluralize(elapsedMinutes, "min");
+  }
+
+  const elapsedHours = Math.floor(elapsedMinutes / 60);
+  if (elapsedHours < 24) {
+    return pluralize(elapsedHours, "hr");
+  }
+
+  const elapsedDays = Math.floor(elapsedHours / 24);
+  return pluralize(elapsedDays, "day");
+}
+
+function pluralize(value, unit) {
+  return `${value} ${unit}${value === 1 ? "" : "s"}`;
 }
 
 function escapeHtml(value) {
