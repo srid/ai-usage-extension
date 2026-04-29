@@ -1,23 +1,19 @@
-const SNAPSHOTS_KEY = "usageSnapshots";
+const SNAPSHOT_KEY_PREFIX = "usageSnapshot:";
 
-export async function getAllSnapshots() {
-  const result = await chrome.storage.local.get(SNAPSHOTS_KEY);
-  return result[SNAPSHOTS_KEY] ?? {};
+export function providerSnapshotKey(providerId) {
+  return `${SNAPSHOT_KEY_PREFIX}${providerId}`;
 }
 
 export async function getProviderSnapshot(providerId) {
-  const snapshots = await getAllSnapshots();
-  return snapshots[providerId] ?? null;
+  const key = providerSnapshotKey(providerId);
+  const result = await chrome.storage.local.get(key);
+  return result[key] ?? null;
 }
 
 export async function saveProviderSnapshot(providerId, snapshot) {
-  const snapshots = await getAllSnapshots();
-  const next = {
-    ...snapshots,
-    [providerId]: snapshot
-  };
-  await chrome.storage.local.set({ [SNAPSHOTS_KEY]: next });
-  return next;
+  const key = providerSnapshotKey(providerId);
+  await chrome.storage.local.set({ [key]: snapshot });
+  return snapshot;
 }
 
-export { SNAPSHOTS_KEY };
+export { SNAPSHOT_KEY_PREFIX };

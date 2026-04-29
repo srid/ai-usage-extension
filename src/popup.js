@@ -1,9 +1,10 @@
 import { getDefaultProvider } from "./providers/index.js";
 import { isOkSnapshot } from "./snapshots.js";
-import { SNAPSHOTS_KEY, getProviderSnapshot } from "./storage.js";
+import { getProviderSnapshot, providerSnapshotKey } from "./storage.js";
 import { formatUsagePercent } from "./usage-format.js";
 
 const provider = getDefaultProvider();
+const providerStorageKey = providerSnapshotKey(provider.id);
 const content = document.querySelector("#content");
 const refreshButton = document.querySelector("#refresh");
 
@@ -24,7 +25,7 @@ refreshButton.addEventListener("click", async () => {
 });
 
 chrome.storage.onChanged.addListener((changes, areaName) => {
-  if (areaName === "local" && changes[SNAPSHOTS_KEY]) {
+  if (areaName === "local" && changes[providerStorageKey]) {
     void renderLatest();
   }
 });
