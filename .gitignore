@@ -1,3 +1,5 @@
 /.do-results.json
 # APM dependencies
 apm_modules/
+dist/
+node_modules/

@@ -1,0 +1,16 @@
+{
+  "manifest_version": 3,
+  "name": "AI Usage",
+  "description": "Tracks AI assistant usage limits from signed-in provider pages.",
+  "version": "0.1.0",
+  "permissions": ["alarms", "scripting", "storage", "tabs"],
+  "host_permissions": ["https://claude.ai/*"],
+  "background": {
+    "service_worker": "src/background.js",
+    "type": "module"
+  },
+  "action": {
+    "default_title": "AI Usage",
+    "default_popup": "popup.html"
+  }
+}
