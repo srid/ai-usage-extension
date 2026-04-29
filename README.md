@@ -15,27 +15,27 @@ The provider scraper lives under `src/providers/`. Badge text, colors, title tex
 ## Development
 
 ```sh
-just check
-just test
-just ci
+nix develop -c just check
+nix develop -c just test
+nix develop -c just ci
 ```
 
 Pack a zip for manual loading or distribution:
 
 ```sh
-just pack
+nix develop -c just pack
 ```
 
 Open Chrome's extension manager for manual loading:
 
 ```sh
-CHROME_BIN=google-chrome just load-active-chrome
+CHROME_BIN=google-chrome nix develop -c just load-active-chrome
 ```
 
 Recent branded Google Chrome builds ignore `--load-extension`. For automated loading, use Chromium or Chrome for Testing:
 
 ```sh
-CHROME_BIN=chromium just run-chromium
+nix develop -c just run-chromium
 ```
 
 Then pin the extension and open the popup or wait for the refresh alarm. The extension needs an authenticated Claude session in that browser profile.
