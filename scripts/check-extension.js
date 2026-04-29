@@ -14,6 +14,8 @@ const requiredFiles = [
   "popup.html",
   "src/background.js",
   "src/badge.js",
+  "src/badge-icon.js",
+  "src/badge-view.js",
   "src/providers/claude.js",
   "src/providers/index.js",
   "src/providers/reader.js",
