@@ -20,7 +20,8 @@ const requiredFiles = [
   "src/popup.js",
   "src/snapshots.js",
   "src/storage.js",
-  "src/tabs.js"
+  "src/tabs.js",
+  "src/usage-format.js"
 ];
 
 await Promise.all(requiredFiles.map((path) => access(path)));

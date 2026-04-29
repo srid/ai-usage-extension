@@ -1,7 +1,7 @@
-import { formatBadgePercent } from "./badge.js";
 import { getDefaultProvider } from "./providers/index.js";
 import { isOkSnapshot } from "./snapshots.js";
 import { SNAPSHOTS_KEY, getProviderSnapshot } from "./storage.js";
+import { formatUsagePercent } from "./usage-format.js";
 
 const provider = getDefaultProvider();
 const content = document.querySelector("#content");
@@ -49,7 +49,7 @@ async function renderLatest() {
   content.innerHTML = `
     <div class="meter-row">
       <span class="label">${escapeHtml(snapshot.primaryLimit?.label ?? "Usage")}</span>
-      <span class="value">${formatBadgePercent(snapshot.percentUsed ?? 0)}</span>
+      <span class="value">${formatUsagePercent(snapshot.percentUsed)}</span>
     </div>
     <progress max="100" value="${Math.min(100, snapshot.percentUsed ?? 0)}"></progress>
     <p class="muted">${updatedText(snapshot.capturedAt)}</p>
@@ -65,7 +65,7 @@ function renderLimit(limit) {
     <li class="meter">
       <div class="meter-row">
         <span class="label">${escapeHtml(limit.label)}</span>
-        <span class="value">${formatBadgePercent(limit.percentUsed)}</span>
+        <span class="value">${formatUsagePercent(limit.percentUsed)}</span>
       </div>
       <progress max="100" value="${Math.min(100, limit.percentUsed)}"></progress>
       ${reset}
