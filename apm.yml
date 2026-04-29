@@ -1,0 +1,9 @@
+name: ai-usage-extension
+version: 1.0.0
+type: hybrid
+
+target: codex
+
+dependencies:
+  apm:
+    - srid/agency#master
