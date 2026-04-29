@@ -29,8 +29,10 @@ nix develop -c just pack
 Open Chrome's extension manager for manual loading:
 
 ```sh
-CHROME_BIN=google-chrome nix develop -c just load-active-chrome
+just load-active-chrome
 ```
+
+On Linux, run that inside the devShell or set `CHROME_BIN` to your browser binary. On macOS it falls back to `open -a "Google Chrome"`.
 
 Recent branded Google Chrome builds ignore `--load-extension`. For automated loading, use Chromium or Chrome for Testing:
 

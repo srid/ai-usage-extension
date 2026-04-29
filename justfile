@@ -40,7 +40,14 @@ pack-crx: prepare-unpacked
 # Open the active Chrome extension manager for manual unpacked loading.
 load-active-chrome:
     @echo "Chrome 137+ branded builds ignore --load-extension. If this opens Chrome, enable Developer mode and Load unpacked: {{ext_dir}}"
-    "{{chrome_bin}}" chrome://extensions
+    if command -v "{{chrome_bin}}" >/dev/null 2>&1; then \
+        "{{chrome_bin}}" chrome://extensions; \
+    elif [ "$(uname -s)" = "Darwin" ]; then \
+        open -a "Google Chrome" "chrome://extensions"; \
+    else \
+        echo "Could not find '{{chrome_bin}}'. Set CHROME_BIN to your Chrome/Chromium binary, or run inside nix develop." >&2; \
+        exit 127; \
+    fi
 
 # Launch Chromium or Chrome for Testing with the unpacked extension loaded.
 run-chromium:
