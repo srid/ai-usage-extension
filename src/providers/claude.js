@@ -279,7 +279,7 @@ export function scrapeClaudeUsage(textOverride, options = {}) {
   }
 
   function isWeeklyLimit(limit) {
-    return /weekly limits/i.test(limit.section ?? "") || /weekly/i.test(limit.label);
+    return /weekly usage limit/i.test(limit.section ?? "") || /weekly limits/i.test(limit.section ?? "") || /weekly/i.test(limit.label);
   }
 
   function isExtraUsageLimit(limit) {
@@ -308,7 +308,7 @@ export function scrapeClaudeUsage(textOverride, options = {}) {
 
   function classifyLimitLabel(context, section = "") {
     const text = context.toLowerCase();
-    const weekly = /weekly limits/i.test(section) || /weekly/i.test(text);
+    const weekly = /weekly usage limit/i.test(section) || /weekly limits/i.test(section) || /weekly/i.test(text);
     if (/extra usage/.test(text)) {
       return "Extra usage";
     }
@@ -355,7 +355,7 @@ export function scrapeClaudeUsage(textOverride, options = {}) {
   function enclosingSection(candidateLines, lineIndex) {
     for (let index = lineIndex; index >= 0; index -= 1) {
       const line = candidateLines[index];
-      if (/^(weekly limits|additional features|extra usage)$/i.test(line)) {
+      if (/^(weekly usage limit|weekly limits|additional features|extra usage)$/i.test(line)) {
         return line;
       }
     }
