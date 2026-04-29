@@ -8,6 +8,7 @@ export const CODEX_PROVIDER = {
   extract: scrapeClaudeUsage,
   extractorOptions: {
     ignoreExtraUsage: false,
+    percentageMode: "remaining",
     providerName: "Codex"
   },
   tabUrlPatterns: [

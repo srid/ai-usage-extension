@@ -7,16 +7,19 @@ test("extracts projected Codex weekly usage from analytics text", () => {
     Codex usage
     Weekly limits
     Cloud tasks
-    40% used
-    Resets Fri 9:00 AM
+    96% remaining
+    Resets May 5, 2026 7:38 AM
   `, {
     ignoreExtraUsage: false,
-    now: new Date(2026, 3, 25, 9, 0, 0),
+    now: new Date(2026, 3, 29, 10, 0, 0),
+    percentageMode: "remaining",
     providerName: "Codex"
   });
 
   assert.equal(result.status, "ok");
-  assert.equal(result.percentUsed, 40);
-  assert.equal(result.projectionStatus, "over-limit");
-  assert.ok(result.projectedPercentUsed > 100);
+  assert.equal(result.percentUsed, 4);
+  assert.equal(result.primaryLimit.resetText, "Resets May 5, 2026 7:38 AM");
+  assert.equal(result.projectionStatus, "within-limit");
+  assert.ok(result.projectedPercentUsed > 4);
+  assert.ok(result.projectedPercentUsed < 100);
 });

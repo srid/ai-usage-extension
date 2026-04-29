@@ -15,6 +15,7 @@ export const CLAUDE_PROVIDER = {
 export function scrapeClaudeUsage(textOverride, options = {}) {
   const providerName = options.providerName ?? "Claude";
   const ignoreExtraUsage = options.ignoreExtraUsage ?? true;
+  const percentageMode = options.percentageMode ?? "used";
   const pageText = readClaudePageText(textOverride);
   const now = coerceDate(options.now);
   const lines = splitUsageLines(pageText);
@@ -114,7 +115,7 @@ export function scrapeClaudeUsage(textOverride, options = {}) {
       const percentagePattern = /(^|[^\d.])(\d{1,3}(?:\.\d+)?)\s*%/g;
       let match = percentagePattern.exec(line);
       while (match) {
-        const percent = clampPercent(Number(match[2]));
+        const percent = percentUsedFromMatch(Number(match[2]), line);
         const section = enclosingSection(candidateLines, index);
         const context = contextForLine(line, match.index, candidateLines, index, section);
         limits.push({
@@ -195,6 +196,11 @@ export function scrapeClaudeUsage(textOverride, options = {}) {
   }
 
   function parseResetAt(resetText, currentTime) {
+    const absoluteResetAt = parseAbsoluteResetAt(resetText, currentTime);
+    if (absoluteResetAt) {
+      return absoluteResetAt;
+    }
+
     const match = /\bresets?\s+(sun|mon|tue|wed|thu|fri|sat)(?:day)?(?:\s+at)?(?:\s+(\d{1,2})(?::(\d{2}))?\s*([ap]\.?m\.?)?)?\b/i.exec(resetText);
     if (!match) {
       return null;
@@ -214,6 +220,30 @@ export function scrapeClaudeUsage(textOverride, options = {}) {
     return resetAt;
   }
 
+  function parseAbsoluteResetAt(resetText, currentTime) {
+    const match = /\bresets?\s+([a-z]+)\s+(\d{1,2}),?\s+(\d{4})?\s+(\d{1,2})(?::(\d{2}))?\s*([ap]\.?m\.?)\b/i.exec(resetText);
+    if (!match) {
+      return null;
+    }
+
+    const monthIndex = monthIndexFor(match[1]);
+    if (monthIndex === -1) {
+      return null;
+    }
+
+    const year = Number(match[3] ?? currentTime.getFullYear());
+    const hour = parseHour(Number(match[4]), match[6]);
+    const minute = Number(match[5] ?? 0);
+    const resetAt = new Date(currentTime);
+    resetAt.setFullYear(year, monthIndex, Number(match[2]));
+    resetAt.setHours(hour, minute, 0, 0);
+    return resetAt > currentTime ? resetAt : null;
+  }
+
+  function monthIndexFor(monthName) {
+    return ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"].indexOf(monthName.slice(0, 3).toLowerCase());
+  }
+
   function weekdayIndex(dayName) {
     return ["sun", "mon", "tue", "wed", "thu", "fri", "sat"].indexOf(dayName.slice(0, 3).toLowerCase());
   }
@@ -231,6 +261,13 @@ export function scrapeClaudeUsage(textOverride, options = {}) {
       return 0;
     }
     return hour;
+  }
+
+  function percentUsedFromMatch(percent, line) {
+    if (percentageMode === "remaining" || /\bremaining\b/i.test(line)) {
+      return clampPercent(100 - percent);
+    }
+    return clampPercent(percent);
   }
 
   function trackedClaudeLimits(candidateLimits) {
