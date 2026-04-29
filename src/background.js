@@ -1,6 +1,7 @@
 import { applyBadgeState } from "./badge.js";
 import { DEFAULT_PROVIDER_ID, PROVIDERS } from "./providers/index.js";
 import { executeProviderExtractor } from "./providers/reader.js";
+import { createErrorSnapshot, createUsageSnapshot } from "./snapshots.js";
 import { getProviderSnapshot, saveProviderSnapshot } from "./storage.js";
 import { findOrOpenProviderTab, waitForTabReady } from "./tabs.js";
 
@@ -73,29 +74,18 @@ async function refreshProvider(provider, reason) {
     const { tab } = await findOrOpenProviderTab(provider, { openIfMissing: true });
     const readyTab = await waitForTabReady(tab.id);
     const usage = await executeProviderExtractor(provider, readyTab.id);
-    const enriched = {
-      ...usage,
-      providerId: provider.id,
-      providerName: provider.name,
-      capturedAt: new Date().toISOString(),
+    const snapshot = createUsageSnapshot(provider, usage, {
       reason,
       sourceUrl: readyTab.url ?? provider.usageUrl,
       tabId: readyTab.id
-    };
-    await saveProviderSnapshot(provider.id, enriched);
+    });
+    await saveProviderSnapshot(provider.id, snapshot);
     if (provider.id === DEFAULT_PROVIDER_ID) {
-      await applyBadgeState(enriched);
+      await applyBadgeState(snapshot);
     }
-    return enriched;
+    return snapshot;
   } catch (error) {
-    const snapshot = {
-      providerId: provider.id,
-      providerName: provider.name,
-      status: "error",
-      capturedAt: new Date().toISOString(),
-      reason,
-      error: error.message
-    };
+    const snapshot = createErrorSnapshot(provider, error, { reason });
     await saveProviderSnapshot(provider.id, snapshot);
     if (provider.id === DEFAULT_PROVIDER_ID) {
       await applyBadgeState(snapshot);

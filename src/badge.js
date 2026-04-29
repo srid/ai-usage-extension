@@ -1,3 +1,5 @@
+import { isOkSnapshot } from "./snapshots.js";
+
 const STATUS_TEXT = {
   empty: "...",
   error: "ERR",
@@ -25,10 +27,10 @@ export function buildBadgeState(snapshot) {
     };
   }
 
-  const percent = typeof snapshot.percentUsed === "number" ? snapshot.percentUsed : null;
+  const percent = isOkSnapshot(snapshot) ? snapshot.percentUsed : null;
   const status = snapshot.status ?? "error";
-  const text = status === "ok" && percent !== null ? formatBadgePercent(percent) : statusText(status);
-  const color = status === "ok" ? colorForPercent(percent) : colorForStatus(status);
+  const text = isOkSnapshot(snapshot) ? formatBadgePercent(percent) : statusText(status);
+  const color = isOkSnapshot(snapshot) ? colorForPercent(percent) : colorForStatus(status);
 
   return {
     color,
@@ -81,7 +83,7 @@ function colorForPercent(percent) {
 
 function buildTitle(snapshot) {
   const providerName = snapshot.providerName ?? snapshot.providerId ?? "AI provider";
-  if (snapshot.status !== "ok") {
+  if (!isOkSnapshot(snapshot)) {
     const reason = snapshot.error ?? snapshot.status ?? "unknown";
     return `${providerName} usage: ${reason}`;
   }

@@ -1,5 +1,6 @@
 import { formatBadgePercent } from "./badge.js";
 import { getDefaultProvider } from "./providers/index.js";
+import { isOkSnapshot } from "./snapshots.js";
 import { SNAPSHOTS_KEY, getProviderSnapshot } from "./storage.js";
 
 const provider = getDefaultProvider();
@@ -40,7 +41,7 @@ async function renderLatest() {
     return;
   }
 
-  if (snapshot.status !== "ok") {
+  if (!isOkSnapshot(snapshot)) {
     renderError(snapshot.error ?? snapshot.status ?? "Usage unavailable", snapshot);
     return;
   }

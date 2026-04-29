@@ -18,6 +18,7 @@ const requiredFiles = [
   "src/providers/index.js",
   "src/providers/reader.js",
   "src/popup.js",
+  "src/snapshots.js",
   "src/storage.js",
   "src/tabs.js"
 ];
