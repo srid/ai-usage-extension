@@ -44,3 +44,23 @@ test("extracts Codex weekly usage from the actual card text order", () => {
   assert.ok(result.projectedPercentUsed > 20);
   assert.ok(result.projectedPercentUsed < 30);
 });
+
+test("does not treat Codex progress bar width as used percentage", () => {
+  const result = scrapeClaudeUsage(`
+    Weekly usage limit
+    96%
+    remaining
+    Resets May 5, 2026 7:38 AM
+    width: 96%
+  `, {
+    ignoreExtraUsage: false,
+    now: new Date(2026, 3, 29, 11, 23, 0),
+    percentageMode: "remaining",
+    providerName: "Codex"
+  });
+
+  assert.equal(result.status, "ok");
+  assert.equal(result.percentUsed, 4);
+  assert.equal(result.projectionStatus, "within-limit");
+  assert.ok(result.projectedPercentUsed < 30);
+});

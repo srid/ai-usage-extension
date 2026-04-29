@@ -80,7 +80,7 @@ export function scrapeClaudeUsage(textOverride, options = {}) {
   }
 
   function extractDomLimits(overrideText, candidateLines) {
-    if (typeof document === "undefined" || typeof overrideText === "string") {
+    if (percentageMode === "remaining" || typeof document === "undefined" || typeof overrideText === "string") {
       return [];
     }
 
