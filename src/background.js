@@ -1,5 +1,6 @@
 import { applyBadgeState } from "./badge.js";
 import { PROVIDERS, getProvider } from "./providers/index.js";
+import { executeProviderExtractor } from "./providers/reader.js";
 import { getProviderSnapshot, saveProviderSnapshot } from "./storage.js";
 import { findOrOpenProviderTab, waitForTabReady } from "./tabs.js";
 
@@ -72,11 +73,12 @@ async function refreshProvider(provider, reason) {
   try {
     const { tab } = await findOrOpenProviderTab(provider, { openIfMissing: true });
     const readyTab = await waitForTabReady(tab.id);
-    const snapshot = await provider.read(readyTab.id);
+    const usage = await executeProviderExtractor(provider, readyTab.id);
     const enriched = {
-      ...snapshot,
+      ...usage,
       providerId: provider.id,
       providerName: provider.name,
+      capturedAt: new Date().toISOString(),
       reason,
       sourceUrl: readyTab.url ?? provider.usageUrl,
       tabId: readyTab.id

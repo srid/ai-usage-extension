@@ -3,23 +3,9 @@ const CLAUDE_USAGE_URL = "https://claude.ai/settings/usage";
 export const CLAUDE_PROVIDER = {
   id: "claude",
   name: "Claude",
+  extract: scrapeClaudeUsage,
   tabUrlPatterns: ["https://claude.ai/settings/usage*"],
-  usageUrl: CLAUDE_USAGE_URL,
-  async read(tabId) {
-    const [injectionResult] = await chrome.scripting.executeScript({
-      target: { tabId },
-      func: scrapeClaudeUsage
-    });
-    return {
-      providerId: "claude",
-      providerName: "Claude",
-      capturedAt: new Date().toISOString(),
-      ...(injectionResult?.result ?? {
-        status: "error",
-        error: "No usage result returned from Claude page"
-      })
-    };
-  }
+  usageUrl: CLAUDE_USAGE_URL
 };
 
 export function scrapeClaudeUsage(textOverride) {
